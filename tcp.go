@@ -23,8 +23,8 @@ func NewClient(opts *ClientOptions) (*tcpClient, error) {
 		return nil, errors.New("Port is invalid")
 	}
 
-	if opts.MaxIdleConns <= 0 || opts.MaxConns <= 0 || opts.MaxIdleConns > opts.MaxConns {
-		return nil, errors.New("invalid MaxConns or MaxIdleConns")
+	if opts.MaxIdleConns <= 0 {
+		return nil, errors.New("invalid MaxIdleConns")
 	}
 
 	return &tcpClient{
@@ -45,15 +45,15 @@ func (c *tcpClient) createConn() (*tcpConn, error) {
 	}
 
 	return &tcpConn{
-		Conn:   conn,
-		writer: bufio.NewWriter(conn),
+		conn:   conn,
+		Writer: bufio.NewWriter(conn),
 		client: c,
 	}, nil
 }
 
 func (c *tcpClient) Connect() error {
 
-	c.conns = make(chan *tcpConn, c.opts.MaxConns)
+	c.conns = make(chan *tcpConn, c.opts.MaxIdleConns)
 
 	for i := 0; i < c.opts.MaxIdleConns; i++ {
 		conn, err := c.createConn()
@@ -89,7 +89,34 @@ func (c *tcpClient) put(conn *tcpConn) error {
 	}
 }
 
-func (c *tcpClient) Close()  {
+func (c *tcpClient) getConns() chan *tcpConn {
+	c.mux.RLock()
+	conns := c.conns
+	c.mux.RUnlock()
+	return conns
+}
+
+func (c *tcpClient) get() (*tcpConn, error) {
+	conns := c.getConns()
+	if conns == nil {
+		return nil, errors.New("Client is closed")
+	}
+	select {
+	case conn := <-conns:
+		if conn == nil {
+			return nil, errors.New("Client is closed")
+		}
+		return conn, nil
+	default:
+		conn, err := c.createConn()
+		if err != nil {
+			return nil, err
+		}
+		return conn, nil
+	}
+}
+
+func (c *tcpClient) Close() {
 	c.mux.Lock()
 	conns := c.conns
 	c.conns = nil
@@ -103,4 +130,40 @@ func (c *tcpClient) Close()  {
 	for conn := range conns {
 		conn.Close()
 	}
+}
+
+func (c *tcpClient) Write(payload []byte) (int, error) {
+	conn, err := c.get()
+	if err != nil {
+		//retry
+		return 0, err
+	}
+	return conn.Write(payload)
+}
+
+func (c *tcpClient) WriteString(payload string) (int, error) {
+	conn, err := c.get()
+	if err != nil {
+		//retry
+		return 0, err
+	}
+	return conn.WriteString(payload)
+}
+
+func (c *tcpClient) WriteRune(payload rune) (int, error) {
+	conn, err := c.get()
+	if err != nil {
+		//retry
+		return 0, err
+	}
+	return conn.WriteRune(payload)
+}
+
+func (c *tcpClient) WriteByte(payload byte) error {
+	conn, err := c.get()
+	if err != nil {
+		//retry
+		return err
+	}
+	return conn.WriteByte(payload)
 }

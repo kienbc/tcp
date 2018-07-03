@@ -7,12 +7,9 @@ import (
 type ClientOptions struct {
 	Host           string
 	Port           int
-	AutoReconnect  bool
+	//AutoReconnect  bool
 	ConnectTimeout time.Duration
-
-	// if MaxIdleConns <= 0 && MaxConns <= 0, remove pool from connection
-	MaxIdleConns int
-	MaxConns     int
+	MaxIdleConns   int
 }
 
 func NewClientOptions() *ClientOptions {
@@ -22,7 +19,6 @@ func NewClientOptions() *ClientOptions {
 		AutoReconnect:  true,
 		ConnectTimeout: time.Second * 5,
 		MaxIdleConns:   5,
-		MaxConns:       20,
 	}
 	return o
 }
@@ -35,9 +31,9 @@ func (o *ClientOptions) SetPort(port int) {
 	o.Port = port
 }
 
-func (o *ClientOptions) SetAutoReConnect(reconnect bool) {
-	o.AutoReconnect = reconnect
-}
+//func (o *ClientOptions) SetAutoReConnect(reconnect bool) {
+//	o.AutoReconnect = reconnect
+//}
 
 func (o *ClientOptions) SetConnectTimeout(timeout time.Duration) {
 	o.ConnectTimeout = timeout
@@ -45,8 +41,4 @@ func (o *ClientOptions) SetConnectTimeout(timeout time.Duration) {
 
 func (o *ClientOptions) SetMaxIdleConns(num int) {
 	o.MaxIdleConns = num
-}
-
-func (o *ClientOptions) SetMaxConns(num int)  {
-	o.MaxConns = num
 }

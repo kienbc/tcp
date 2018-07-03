@@ -7,8 +7,8 @@ import (
 )
 
 type tcpConn struct {
-	net.Conn
-	writer   *bufio.Writer
+	conn     net.Conn
+	*bufio.Writer
 	client   *tcpClient
 	mux      sync.RWMutex
 	unusable bool
@@ -19,8 +19,9 @@ func (this *tcpConn) Close() error {
 	defer this.mux.RUnlock()
 
 	if this.unusable {
-		if this.Conn != nil {
-			return this.Conn.Close()
+		if this.conn != nil {
+			this.Writer = nil
+			return this.conn.Close()
 		}
 		return nil
 	}
@@ -32,4 +33,3 @@ func (this *tcpConn) MarkUnusable() {
 	this.unusable = true
 	this.mux.Unlock()
 }
-
