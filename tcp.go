@@ -6,6 +6,8 @@ import (
 	"errors"
 	"fmt"
 	"sync"
+
+	"log"
 )
 
 type tcpClient struct {
@@ -60,6 +62,7 @@ func (c *tcpClient) Connect() error {
 		if err != nil {
 			c.Close()
 			fmt.Errorf("Factory is not able to create connection to fill the pool: %s", err)
+			return err
 		}
 		c.conns <- conn
 	}
@@ -78,11 +81,13 @@ func (c *tcpClient) put(conn *tcpConn) error {
 	defer c.mux.RUnlock()
 
 	if c.conns == nil {
+		conn.MarkUnusable()
 		return conn.Close()
 	}
 
 	select {
 	case c.conns <- conn:
+		log.Println("========== put: ", conn)
 		return nil
 	default:
 		return conn.Close()
@@ -127,7 +132,9 @@ func (c *tcpClient) Close() {
 	}
 
 	close(conns)
+	log.Println("Close client")
 	for conn := range conns {
+		conn.MarkUnusable()
 		conn.Close()
 	}
 }
@@ -138,6 +145,7 @@ func (c *tcpClient) Write(payload []byte) (int, error) {
 		//retry
 		return 0, err
 	}
+	defer conn.Close()
 	return conn.Write(payload)
 }
 
@@ -147,6 +155,7 @@ func (c *tcpClient) WriteString(payload string) (int, error) {
 		//retry
 		return 0, err
 	}
+	defer conn.Close()
 	return conn.WriteString(payload)
 }
 
@@ -156,6 +165,7 @@ func (c *tcpClient) WriteRune(payload rune) (int, error) {
 		//retry
 		return 0, err
 	}
+	defer conn.Close()
 	return conn.WriteRune(payload)
 }
 
@@ -165,5 +175,6 @@ func (c *tcpClient) WriteByte(payload byte) error {
 		//retry
 		return err
 	}
+	defer conn.Close()
 	return conn.WriteByte(payload)
 }

@@ -4,6 +4,8 @@ import (
 	"sync"
 	"net"
 	"bufio"
+
+	"log"
 )
 
 type tcpConn struct {
@@ -19,6 +21,7 @@ func (this *tcpConn) Close() error {
 	defer this.mux.RUnlock()
 
 	if this.unusable {
+		log.Println("====== tcpConn Close: ", this)
 		if this.conn != nil {
 			this.Writer = nil
 			return this.conn.Close()

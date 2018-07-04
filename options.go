@@ -7,16 +7,15 @@ import (
 type ClientOptions struct {
 	Host           string
 	Port           int
-	//AutoReconnect  bool
 	ConnectTimeout time.Duration
 	MaxIdleConns   int
 }
 
 func NewClientOptions() *ClientOptions {
 	o := &ClientOptions{
-		Host:           "",
-		Port:           0,
-		AutoReconnect:  true,
+		Host: "",
+		Port: 0,
+		//AutoReconnect:  true,
 		ConnectTimeout: time.Second * 5,
 		MaxIdleConns:   5,
 	}
@@ -30,10 +29,6 @@ func (o *ClientOptions) SetHost(host string) {
 func (o *ClientOptions) SetPort(port int) {
 	o.Port = port
 }
-
-//func (o *ClientOptions) SetAutoReConnect(reconnect bool) {
-//	o.AutoReconnect = reconnect
-//}
 
 func (o *ClientOptions) SetConnectTimeout(timeout time.Duration) {
 	o.ConnectTimeout = timeout
