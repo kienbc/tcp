@@ -1,5 +1,6 @@
 package tcp
 
+
 import (
 	"time"
 )
@@ -17,7 +18,7 @@ func NewClientOptions() *ClientOptions {
 		Port: 0,
 		//AutoReconnect:  true,
 		ConnectTimeout: time.Second * 5,
-		MaxIdleConns:   5,
+		MaxIdleConns:   1,
 	}
 	return o
 }
@@ -37,3 +38,4 @@ func (o *ClientOptions) SetConnectTimeout(timeout time.Duration) {
 func (o *ClientOptions) SetMaxIdleConns(num int) {
 	o.MaxIdleConns = num
 }
+

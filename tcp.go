@@ -1,12 +1,11 @@
 package tcp
 
 import (
-	"net"
-	"bufio"
-	"errors"
-	"fmt"
 	"sync"
-
+	"errors"
+	"bufio"
+	"net"
+	"fmt"
 	"log"
 )
 
@@ -69,39 +68,23 @@ func (c *tcpClient) Connect() error {
 	return nil
 }
 
-func (c *tcpClient) reConnect() error {
-	return nil
-}
-
-func (c *tcpClient) put(conn *tcpConn) error {
-	if conn == nil {
-		return errors.New("Connection is nil. Rejecting")
-	}
-	c.mux.RLock()
-	defer c.mux.RUnlock()
-
-	if c.conns == nil {
-		conn.MarkUnusable()
-		return conn.Close()
-	}
-
-	select {
-	case c.conns <- conn:
-		log.Println("========== put: ", conn)
-		return nil
-	default:
-		return conn.Close()
-	}
-}
-
-func (c *tcpClient) getConns() chan *tcpConn {
-	c.mux.RLock()
+func (c *tcpClient) Close() {
+	c.mux.Lock()
 	conns := c.conns
-	c.mux.RUnlock()
-	return conns
+	c.conns = nil
+	c.mux.Unlock()
+
+	if conns == nil {
+		return
+	}
+
+	close(conns)
+	for conn := range conns {
+		conn.Close()
+	}
 }
 
-func (c *tcpClient) get() (*tcpConn, error) {
+func (c *tcpClient) Conn() (*tcpConn, error) {
 	conns := c.getConns()
 	if conns == nil {
 		return nil, errors.New("Client is closed")
@@ -121,60 +104,26 @@ func (c *tcpClient) get() (*tcpConn, error) {
 	}
 }
 
-func (c *tcpClient) Close() {
-	c.mux.Lock()
+func (c *tcpClient) put(conn *tcpConn) error {
+	if conn == nil {
+		return errors.New("Connection is nil. Rejecting")
+	}
+	c.mux.RLock()
+	defer c.mux.RUnlock()
+
+	select {
+	case c.conns <- conn:
+		log.Println("==== put conn: ", conn)
+		return nil
+	default:
+		log.Println("==== put close conn: ", conn)
+		return conn.conn.Close()
+	}
+}
+
+func (c *tcpClient) getConns() chan *tcpConn {
+	c.mux.RLock()
 	conns := c.conns
-	c.conns = nil
-	c.mux.Unlock()
-
-	if conns == nil {
-		return
-	}
-
-	close(conns)
-	log.Println("Close client")
-	for conn := range conns {
-		conn.MarkUnusable()
-		conn.Close()
-	}
-}
-
-func (c *tcpClient) Write(payload []byte) (int, error) {
-	conn, err := c.get()
-	if err != nil {
-		//retry
-		return 0, err
-	}
-	defer conn.Close()
-	return conn.Write(payload)
-}
-
-func (c *tcpClient) WriteString(payload string) (int, error) {
-	conn, err := c.get()
-	if err != nil {
-		//retry
-		return 0, err
-	}
-	defer conn.Close()
-	return conn.WriteString(payload)
-}
-
-func (c *tcpClient) WriteRune(payload rune) (int, error) {
-	conn, err := c.get()
-	if err != nil {
-		//retry
-		return 0, err
-	}
-	defer conn.Close()
-	return conn.WriteRune(payload)
-}
-
-func (c *tcpClient) WriteByte(payload byte) error {
-	conn, err := c.get()
-	if err != nil {
-		//retry
-		return err
-	}
-	defer conn.Close()
-	return conn.WriteByte(payload)
+	c.mux.RUnlock()
+	return conns
 }

@@ -1,10 +1,9 @@
 package tcp
 
 import (
+	"bufio"
 	"sync"
 	"net"
-	"bufio"
-
 	"log"
 )
 
@@ -20,9 +19,9 @@ func (this *tcpConn) Close() error {
 	this.mux.RLock()
 	defer this.mux.RUnlock()
 
-	if this.unusable {
-		log.Println("====== tcpConn Close: ", this)
+	if this.unusable || this.client.conns == nil {
 		if this.conn != nil {
+			log.Println("==== close conn: ", this)
 			this.Writer = nil
 			return this.conn.Close()
 		}
@@ -31,7 +30,7 @@ func (this *tcpConn) Close() error {
 	return this.client.put(this)
 }
 
-func (this *tcpConn) MarkUnusable() {
+func (this *tcpConn) markUnusable() {
 	this.mux.Lock()
 	this.unusable = true
 	this.mux.Unlock()
