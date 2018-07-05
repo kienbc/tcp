@@ -18,7 +18,7 @@ func NewClientOptions() *ClientOptions {
 		Port: 0,
 		//AutoReconnect:  true,
 		ConnectTimeout: time.Second * 5,
-		MaxIdleConns:   1,
+		MaxIdleConns:   10,
 	}
 	return o
 }
